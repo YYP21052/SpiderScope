@@ -58,9 +58,14 @@ DOWNLOAD_DELAY = 1
 
 # Configure item pipelines
 # See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
-#ITEM_PIPELINES = {
+# pipe一般为关闭状态
+# ITEM_PIPELINES = {
 #    "crawler.pipelines.CrawlerPipeline": 300,
 #}
+# 启用管道，数字 300 表示优先级（数字越小越先执行）
+ITEM_PIPELINES = {
+   "crawler.pipelines.MongoPipeline": 300,
+}
 
 # Enable and configure the AutoThrottle extension (disabled by default)
 # See https://docs.scrapy.org/en/latest/topics/autothrottle.html
