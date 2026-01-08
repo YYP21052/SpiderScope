@@ -126,3 +126,17 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# ===========================
+# Celery Configuration 异步任务队列配置
+# ===========================
+
+# 告诉 Celery：Redis 在本地的 6379 端口
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+
+# 时区设置（和 Django 保持一致）
+CELERY_TIMEZONE = 'Asia/Shanghai'
+
+# Windows 下必须要加这个配置，否则任务会卡死！
+CELERY_WORKER_POOL_CLASS = 'eventlet'
