@@ -15,8 +15,12 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, include  # <--- 注意：一定要加上 include
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+
+    # 把 core 应用的 API 挂载到 /api/ 下
+    # 以后访问接口就是：http://127.0.0.1:8000/api/tasks/
+    path('api/', include('core.urls')),
 ]
