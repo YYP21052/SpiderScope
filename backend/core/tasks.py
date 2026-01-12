@@ -8,34 +8,44 @@
 """
 import subprocess
 import os
-import sys  # <--- 新增
+import sys
 from celery import shared_task
 from django.conf import settings
+from .models import SpiderTask  # <--- 引入模型
 
 
 @shared_task
-def run_spider_task(spider_name):
+def run_spider_task(task_id):  # <--- 注意：这里改传 task_id 而不是名字
     """
-    Celery 任务：启动爬虫（Windows 兼容优化版）
+    Celery 任务：根据数据库ID启动爬虫，并同步更新状态
     """
-    print(f"🕷️ 收到任务：准备启动爬虫 [{spider_name}] ...")
+    # 1. 获取数据库对象
+    try:
+        task = SpiderTask.objects.get(id=task_id)
+        spider_name = "quotes"  # 暂时写死，以后可以从 task.name 获取动态名字
+    except SpiderTask.DoesNotExist:
+        return f"❌ 任务 ID {task_id} 不存在"
 
-    # 1. 定位 Scrapy 项目目录
+    # 2. 修改状态为：运行中
+    print(f"🔄 更新状态：RUNNING (Task ID: {task_id})")
+    task.status = 'RUNNING'
+    task.save()
+
+    # 3. 准备启动爬虫
     cwd = os.path.join(settings.BASE_DIR, 'crawler')
-
-    # 2. 拼接命令：使用当前的 python.exe 去运行 scrapy 模块
-    # 这样比直接调用 'scrapy' 命令更稳定，能确保用对虚拟环境
     cmd = [sys.executable, '-m', 'scrapy', 'crawl', spider_name]
 
     try:
-        # 3. 执行命令 (Windows 下不要使用 capture_output=True，容易死锁)
-        # 我们直接让它在当前窗口运行，这样你能在 Celery 窗口直接看到 Scrapy 的日志
+        # Windows 防死锁写法
         subprocess.run(cmd, cwd=cwd, check=True)
 
-        # 既然没有捕获输出，我们就简单返回成功
-        return f"✅ 爬虫 {spider_name} 执行指令已发送完毕"
+        # 4. 爬虫结束，修改状态为：已完成
+        task.status = 'COMPLETED'
+        task.save()
+        return f"✅ 任务 {task_id} 执行完成"
 
-    except subprocess.CalledProcessError as e:
-        return f"❌ 爬虫执行失败，错误码: {e.returncode}"
     except Exception as e:
-        return f"💥 发生未知异常: {str(e)}"
+        # 5. 如果出错，修改状态为：失败
+        task.status = 'FAILED'
+        task.save()
+        return f"💥 任务执行失败: {str(e)}"

@@ -24,7 +24,8 @@ class SpiderTask(models.Model):
     # [核心亮点] PostgreSQL 专属 JSONField
     # 这里可以存任意字典，比如 {"city": "beijing", "keywords": ["python", "django"]}
     # 不需要频繁修改数据库表结构，非常适合爬虫配置
-    spider_config = models.JSONField("爬虫配置", default=dict, blank=True)
+    # 加上 null=True，给它“免死金牌”
+    spider_config = models.JSONField("爬虫配置", default=dict, blank=True, null=True)
 
     # 爬虫的抓取频率，比如 "daily", "weekly"
     frequency = models.CharField("抓取频率", max_length=50, default="daily")

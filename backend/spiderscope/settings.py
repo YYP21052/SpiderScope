@@ -31,6 +31,7 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'corsheaders',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -42,6 +43,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -140,3 +142,9 @@ CELERY_TIMEZONE = 'Asia/Shanghai'
 
 # Windows 下必须要加这个配置，否则任务会卡死！
 CELERY_WORKER_POOL_CLASS = 'eventlet'
+
+# 允许跨域的白名单
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",  # Vue 的地址
+    "http://127.0.0.1:5173",
+]
