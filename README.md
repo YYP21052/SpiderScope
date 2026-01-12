@@ -1,12 +1,3 @@
-这是一份为你精心设计的 `README.md`。
-
-这份文档不仅是代码的说明书，更是你**技术实力的展示墙**。它采用了标准的开源项目格式，突出了**微服务架构**、**全栈开发**以及**v2.0 的业务价值**。
-
-请在你的项目根目录下创建一个 `README.md` 文件，将下面的内容复制进去。
-
----
-
-```markdown
 # 🕷️ JobRadar (Powered by SpiderScope)
 
 > **一个基于微服务架构的分布式职位数据采集与分析中台**
@@ -109,7 +100,7 @@ graph LR
 ### 1. 克隆项目
 
 ```bash
-git clone [https://github.com/your-username/JobRadar.git](https://github.com/your-username/JobRadar.git)
+git clone git@github.com:YYP21052/SpiderScope.git
 cd JobRadar
 
 ```
