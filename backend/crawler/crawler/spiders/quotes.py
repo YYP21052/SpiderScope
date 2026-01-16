@@ -2,6 +2,9 @@ import scrapy
 
 
 class QuotesSpider(scrapy.Spider):
+    """
+    测试 scrapy.Spider，目标网址：quotes.toscrape.com"
+    """
     name = "quotes"
     # 限制域名，限制只能访问allowed_domains中的域名，防止跑偏
     allowed_domains = ["quotes.toscrape.com"]

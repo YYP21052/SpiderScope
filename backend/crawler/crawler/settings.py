@@ -6,6 +6,35 @@
 #     https://docs.scrapy.org/en/latest/topics/settings.html
 #     https://docs.scrapy.org/en/latest/topics/downloader-middleware.html
 #     https://docs.scrapy.org/en/latest/topics/spider-middleware.html
+import os
+import sys
+import django
+
+# 获取当前文件的路径
+# current: .../backend/crawler/crawler/
+current_dir = os.path.dirname(os.path.abspath(__file__))
+# print(f"当前文件路径：{current_dir}")
+
+# 往上跳 2 层，找到 backend 目录
+#  .../backend/crawler/crawler <- 目前
+#  .../backend/crawler
+#  .../backend (这里有 manage.py)
+backend_path = os.path.dirname(os.path.dirname(current_dir))
+
+# 将 backend 目录加入系统路径，这样 Python 才能找到 'spiderscope' 模块
+sys.path.append(backend_path)
+
+# --- 调试代码 ---
+# print(f"DEBUG: Backend 路径设为: {backend_path}")
+# print(f"DEBUG: Backend 目录下有哪些文件? {os.listdir(backend_path)}")
+# -------------------------------------
+
+# 指定 Django 的配置文件 (假设你的 Django 项目名叫 spiderscope)
+os.environ['DJANGO_SETTINGS_MODULE'] = 'spiderscope.settings'
+
+# 启动 Django
+django.setup()
+
 
 BOT_NAME = "crawler"
 
@@ -64,7 +93,11 @@ DOWNLOAD_DELAY = 1
 #}
 # 启用管道，数字 300 表示优先级（数字越小越先执行）
 ITEM_PIPELINES = {
-   "crawler.pipelines.MongoPipeline": 300,
+   # 这里的 key 格式是：文件夹名.文件名.类名
+   'crawler.pipelines.JobPostgresPipeline': 300,
+
+   # 保留 Mongo 的功能
+   # 'crawler.pipelines.MongoPipeline': 400,
 }
 
 # Enable and configure the AutoThrottle extension (disabled by default)

@@ -46,3 +46,26 @@ class SpiderTask(models.Model):
 
     def __str__(self):
         return self.name
+
+
+
+class Job(models.Model):
+    '''
+    职位表，存储爬取到的职位
+    '''
+
+    title = models.CharField(max_length=255, verbose_name="职位名称")
+    company = models.CharField(max_length=255, verbose_name="公司名称")
+    location = models.CharField(max_length=100, verbose_name="工作地点", null=True, blank=True)
+    salary = models.CharField(max_length=100, verbose_name="薪资范围", null=True, blank=True)
+
+    # 核心字段：详情页URL (用来去重，防止同一个职位存两次)
+    detail_url = models.URLField(unique=True, verbose_name="详情页URL") # unique=True 防止重复抓取
+    source_website = models.CharField(max_length=50, verbose_name="来源网站", default="unknown")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="抓取时间")
+
+    def __str__(self):
+        return f"{self.title} - {self.company}"
+
+    class Meta:
+        ordering = ['-created_at'] # 最新抓取的排前面
