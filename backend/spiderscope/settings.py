@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+from datetime import timedelta
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -148,3 +149,22 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",  # Vue 的地址
     "http://127.0.0.1:5173",
 ]
+
+REST_FRAMEWORK = {
+    # 认证方式，优先使用JWT
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ],
+    # 默认权限
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ]
+}
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60), # 访问 Token 一个小时会过期
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7), # 7天会刷新一次 Token
+    'ROTATE_REFRESH_TOKENS': False, # 是否刷新 Token
+    'BLACKLIST_AFTER_ROTATION': False, # 旧 Token 是否保留。既 Token 是否循环使用
+    'AUTH_HEADER_CLASS':('Bearer',),
+}

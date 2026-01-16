@@ -16,6 +16,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include  # <--- 注意：一定要加上 include
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -23,4 +24,8 @@ urlpatterns = [
     # 把 core 应用的 API 挂载到 /api/ 下
     # 以后访问接口就是：http://127.0.0.1:8000/api/tasks/
     path('api/', include('core.urls')),
+
+    # === JWT Auth Endpoints ===
+    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'), # 登录接口
+    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'), # 刷新接口
 ]
