@@ -51,21 +51,48 @@ class SpiderTask(models.Model):
 
 class Job(models.Model):
     '''
-    职位表，存储爬取到的职位
+    职位表：适配 Boss直聘、前程无忧、智联、猎聘 的通用数据结构
     '''
-
+    # --- 基础信息 ---
     title = models.CharField(max_length=255, verbose_name="职位名称")
+    salary = models.CharField(max_length=100, verbose_name="薪资范围", null=True, blank=True)
     company = models.CharField(max_length=255, verbose_name="公司名称")
     location = models.CharField(max_length=100, verbose_name="工作地点", null=True, blank=True)
-    salary = models.CharField(max_length=100, verbose_name="薪资范围", null=True, blank=True)
+    
+    # --- 进阶要求 (新增) ---
+    experience = models.CharField(max_length=50, verbose_name="经验要求", null=True, blank=True) 
+    education = models.CharField(max_length=50, verbose_name="学历要求", null=True, blank=True) 
+    
+    # --- 公司画像 (新增) ---
+    industry = models.CharField(max_length=100, verbose_name="所属行业", null=True, blank=True)
+    company_size = models.CharField(max_length=50, verbose_name="公司规模", null=True, blank=True)
+    
+    # --- 职位详情 (新增) ---
+    tags = models.CharField(max_length=255, verbose_name="技能标签", null=True, blank=True)
+    welfare = models.CharField(max_length=255, verbose_name="福利待遇", null=True, blank=True)
+    job_description = models.TextField(verbose_name="职位描述", null=True, blank=True)
 
-    # 核心字段：详情页URL (用来去重，防止同一个职位存两次)
-    detail_url = models.URLField(unique=True, verbose_name="详情页URL") # unique=True 防止重复抓取
-    source_website = models.CharField(max_length=50, verbose_name="来源网站", default="unknown")
+    # --- 系统字段 ---
+    source_website = models.CharField(
+        max_length=50,
+        verbose_name="来源平台",
+        choices=[
+            ('boss', 'BOSS直聘'),
+            ('51job', '前程无忧'),
+            ('shixiseng', '实习僧'),  # 新增
+            ('yingjiesheng', '应届生求职网'),  # 新增
+            ('lagou', '拉勾网')  # 新增
+        ],
+        default="unknown"
+    )
+    
+    detail_url = models.URLField(unique=True, verbose_name="详情页URL") 
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="抓取时间")
+
+    class Meta:
+        verbose_name = "职位信息"
+        verbose_name_plural = verbose_name
+        ordering = ['-created_at']
 
     def __str__(self):
         return f"{self.title} - {self.company}"
-
-    class Meta:
-        ordering = ['-created_at'] # 最新抓取的排前面

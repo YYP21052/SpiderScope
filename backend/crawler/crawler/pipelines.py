@@ -3,44 +3,72 @@
 # Don't forget to add your pipeline to the ITEM_PIPELINES setting
 # See: https://docs.scrapy.org/en/latest/topics/item-pipeline.html
 
-from itemadapter import ItemAdapter
-from core.models import Job
-from asgiref.sync import sync_to_async # 引入这个转换器，把sync转为async
+import os
+import sys
+import django
+from asgiref.sync import sync_to_async
 
 # ==========================================
-# 使用PostgreSQL Pipeline (存入 Django)
+# 1. 初始化 Django 环境 (必须在导入 models 之前)
+# ==========================================
+# 获取当前路径: .../backend/crawler/crawler/
+current_dir = os.path.dirname(os.path.abspath(__file__))
+# 获取 backend 路径: .../backend/
+backend_path = os.path.dirname(os.path.dirname(current_dir))
+sys.path.append(backend_path)
+
+# 指定 Django 配置文件
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'spiderscope.settings')
+
+# 启动 Django (这一步至关重要！)
+django.setup()
+
+# 只有在 setup() 之后才能导入模型
+from core.models import Job
+
+
+# ==========================================
+# 2. PostgreSQL Pipeline (存入 Django)
 # ==========================================
 class JobPostgresPipeline:
     async def process_item(self, item, spider):
-        # 只有当爬虫是 job_spider 时，才执行这个逻辑
-        # 这样不会影响你之前的 quote 爬虫
-        if spider.name != 'job_spider':
+        # ✅ 修正：定义白名单，允许这些爬虫的数据通过
+        target_spiders = ['51job', 'boss', 'shixiseng', 'yingjiesheng', 'lagou']
+
+        # 如果当前爬虫不在白名单里，直接跳过
+        if spider.name not in target_spiders:
             return item
 
         try:
-
-            # Django ORM 的黑魔法：update_or_create
-            # 作用：根据 detail_url 判断，如果数据库里有就更新，没有就创建
-            # 定义一个同步函数来干脏活累活
+            # 定义一个同步函数来干脏活累活 (Django ORM 是同步的)
             def save_to_db():
-                return Job.objects.update_or_create(
-                    detail_url=item['detail_url'],
+                # update_or_create: 根据 detail_url 查重
+                # 有则更新，无则创建
+                obj, created = Job.objects.update_or_create(
+                    detail_url=item.get('detail_url'),
                     defaults={
-                        'title': item['title'],
-                        'company': item['company'],
-                        'location': item.get('location', 'Remote'),
-                        'salary': item.get('salary', 'N/A'),
-                        'source_website': item.get('source_website', 'unknown')
+                        'title': item.get('title'),
+                        'company': item.get('company'),
+                        'salary': item.get('salary', '面议'),
+                        'location': item.get('location', '全国'),
+                        'source_website': item.get('source_website', 'unknown'),
+                        'experience': item.get('experience', ''),
+                        'education': item.get('education', ''),
+                        'industry': item.get('industry', ''),
+                        'company_size': item.get('company_size', ''),
+                        'tags': item.get('tags', ''),
+                        'welfare': item.get('welfare', ''),
+                        'job_description': item.get('job_description', '')
                     }
                 )
+                return obj, created
 
-            # 👇 4. 使用 sync_to_async 包装并在线程池里运行，加上 await 等待结果
+            # 🚀 在异步环境里调用同步数据库操作
             job, created = await sync_to_async(save_to_db)()
 
-            if created:
-                spider.logger.info(f"🆕 [Django] 成功入库新职位: {item['title']}")
-            else:
-                spider.logger.info(f"♻️ [Django] 职位已存在(已更新): {item['title']}")
+            action = "✨ 新增" if created else "♻️ 更新"
+            # 打印明显的日志
+            spider.logger.info(f"💾 [Django] {action}: {item['title']} - {item['company']}")
 
         except Exception as e:
             spider.logger.error(f"❌ [Django] 入库失败: {e}")

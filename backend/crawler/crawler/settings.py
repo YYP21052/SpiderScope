@@ -47,13 +47,19 @@ ADDONS = {}
 # Crawl responsibly by identifying yourself (and your website) on the user-agent
 #USER_AGENT = "crawler (+http://www.yourdomain.com)"
 
-# Obey robots.txt rules
-ROBOTSTXT_OBEY = True
+# 1. 遵守 Robots 协议设为 False (否则招聘网站什么都不让你爬)
+ROBOTSTXT_OBEY = False
+
+# 2. 爬取数量限制 (当抓取到 500 个职位后，爬虫自动停止)
+CLOSESPIDER_ITEMCOUNT = 500
+
+# 3. 下载延迟 (模拟人类慢速浏览)
+DOWNLOAD_DELAY = 3
+RANDOMIZE_DOWNLOAD_DELAY = True
 
 # Concurrency and throttling settings
 #CONCURRENT_REQUESTS = 16
 CONCURRENT_REQUESTS_PER_DOMAIN = 1
-DOWNLOAD_DELAY = 1
 
 # Disable cookies (enabled by default)
 #COOKIES_ENABLED = False
@@ -61,11 +67,11 @@ DOWNLOAD_DELAY = 1
 # Disable Telnet Console (enabled by default)
 #TELNETCONSOLE_ENABLED = False
 
-# Override the default request headers:
-#DEFAULT_REQUEST_HEADERS = {
-#    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-#    "Accept-Language": "en",
-#}
+# 4. 默认请求头 (伪装成浏览器)
+DEFAULT_REQUEST_HEADERS = {
+   "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+   "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+}
 
 # Enable or disable spider middlewares
 # See https://docs.scrapy.org/en/latest/topics/spider-middleware.html
@@ -75,9 +81,10 @@ DOWNLOAD_DELAY = 1
 
 # Enable or disable downloader middlewares
 # See https://docs.scrapy.org/en/latest/topics/downloader-middleware.html
-#DOWNLOADER_MIDDLEWARES = {
-#    "crawler.middlewares.CrawlerDownloaderMiddleware": 543,
-#}
+DOWNLOADER_MIDDLEWARES = {
+   # 数字越小优先级越高。543 是一个惯用值。
+   'crawler.middlewares.JobSeleniumMiddleware': 543,
+}
 
 # Enable or disable extensions
 # See https://docs.scrapy.org/en/latest/topics/extensions.html
@@ -123,3 +130,11 @@ ITEM_PIPELINES = {
 
 # Set settings whose default value is deprecated to a future-proof value
 FEED_EXPORT_ENCODING = "utf-8"
+
+
+# ===========================================
+# 日志等级设置 (解决控制台刷屏问题)
+# ===========================================
+# 可选值: 'CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG'
+# 设置为 'WARNING' 后，只打印 报错信息 和 你自己写的 print()
+LOG_LEVEL = 'WARNING'
