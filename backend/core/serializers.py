@@ -7,11 +7,16 @@
 @requirement:
 """
 from rest_framework import serializers
-from .models import SpiderTask
+from .models import SpiderTask, Job
 
+# 1. 爬虫任务序列化器
 class SpiderTaskSerializer(serializers.ModelSerializer):
     class Meta:
         model = SpiderTask
-        # 这里的 '__all__' 表示把模型里所有字段都翻译成 JSON
-        # 如果只想暴露特定字段，可以用 fields = ['id', 'name', 'status']
+        fields = '__all__'
+
+# 2. 职位数据序列化器
+class JobSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Job
         fields = '__all__'

@@ -89,6 +89,11 @@ class Job(models.Model):
     detail_url = models.URLField(unique=True, verbose_name="详情页URL") 
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="抓取时间")
 
+    # 🔥 新增下面这两个字段 (用于存储清洗后的数字)
+    min_salary = models.IntegerField(default=0, help_text="最低月薪(元)")
+    max_salary = models.IntegerField(default=0, help_text="最高月薪(元)")
+
+
     class Meta:
         verbose_name = "职位信息"
         verbose_name_plural = verbose_name

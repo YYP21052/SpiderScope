@@ -1,31 +1,20 @@
-"""
-URL configuration for spiderscope project.
-
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/5.2/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
-"""
 from django.contrib import admin
-from django.urls import path, include  # <--- 注意：一定要加上 include
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+
+# 👇 这里现在应该正常了，因为 core/views.py 里确实有这两个类
+from core.views import SpiderTaskViewSet, JobViewSet
+
+router = DefaultRouter()
+router.register(r'tasks', SpiderTaskViewSet)
+router.register(r'jobs', JobViewSet)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('api/', include(router.urls)), # 挂载路由
 
-    # 把 core 应用的 API 挂载到 /api/ 下
-    # 以后访问接口就是：http://127.0.0.1:8000/api/tasks/
-    path('api/', include('core.urls')),
-
-    # === JWT Auth Endpoints ===
-    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'), # 登录接口
-    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'), # 刷新接口
+    # JWT 认证
+    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
 ]
