@@ -1,38 +1,82 @@
 version: '3.8'
 
 services:
+  # 1. 数据库服务 (PostgreSQL)
   db:
-    image: postgres:15-alpine
-    container_name: spider_postgres
+    image: postgres:15
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
     environment:
-      POSTGRES_DB: spider_db
-      POSTGRES_USER: spider_user
-      POSTGRES_PASSWORD: spider_password
+      - POSTGRES_DB=spiderscope
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
     ports:
       - "5432:5432"
-    volumes:
-      - pg_data:/var/lib/postgresql/data
 
-  mongo:
-    image: mongo:6.0
-    container_name: spider_mongo
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: mongo_user
-      MONGO_INITDB_ROOT_PASSWORD: mongo_password
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongo_data:/data/db
-
+  # 2. Redis 服务 (消息队列)
   redis:
-    image: redis:7-alpine
-    container_name: spider_redis
+    image: redis:7
     ports:
       - "6379:6379"
+
+  # 3. MongoDB 服务 (爬虫数据存储)
+  mongo:
+    image: mongo:6
     volumes:
-      - redis_data:/data
+      - mongo_data:/data/db
+    ports:
+      - "27017:27017"
+
+  # 4. 后端 API 服务
+  backend:
+    build: ./backend
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - redis
+      - mongo
+    environment:
+      - DB_HOST=db
+      - DB_NAME=spiderscope
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - REDIS_URL=redis://redis:6379/0
+      - MONGO_URI=mongodb://mongo:27017/
+
+  # 5. Celery Worker (异步任务)
+  celery:
+    build: ./backend
+    command: celery -A spiderscope worker -l info
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - db
+      - redis
+      - mongo
+    environment:
+      - DB_HOST=db
+      - DB_NAME=spiderscope
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - REDIS_URL=redis://redis:6379/0
+      - MONGO_URI=mongodb://mongo:27017/
+      - DOCKER_MODE=true
+    # Linux Docker 不支持 GUI，如果你需要爬虫在 Docker 里跑 Selenium
+    # 要么配置 Headless，要么单独接一个 selenium/standalone-chrome 容器。
+    # 这里保持简单，使用当前镜像，用户需自配 headless 或接受 docker 只能跑 request 爬虫
+
+    # 6. 前端服务 (Nginx)
+  frontend:
+    build: ./frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
 
 volumes:
-  pg_data:
+  postgres_data:
   mongo_data:
-  redis_data:

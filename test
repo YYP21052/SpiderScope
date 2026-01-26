@@ -1,0 +1,179 @@
+# 🕷️ JobRadar - 分布式全栈职位采集与分析平台
+
+> **从课程设计进化而来的企业级数据中台解决方案**
+> *Distributed Job Data Acquisition & Analysis Platform*
+
+---
+
+## 📖 项目简介 (Introduction)
+
+**JobRadar** (原名 SpiderScope) 是一个集**数据采集、清洗、存储、分析、可视化**于一体的全栈系统。
+
+本项目旨在解决大规模招聘数据采集中的**反爬封锁**与**数据清洗**难题。通过构建自动化的分布式爬虫集群，实现了对 **Boss直聘**、**前程无忧 (51job)** 等主流平台的实时数据抓取，并利用可视化大屏为求职者提供薪资分布与行业趋势分析。
+
+> 💡 **设计理念**：本项目采用**后端驱动**的设计思路，虽然前端界面采用极简风格（Element Plus），但底层拥有完整的分布式架构、稳健的任务调度与硬核的反爬虫策略。
+
+---
+
+## 👀 界面预览 (Preview)
+
+*(建议在此处放 1-2 张截图，例如：数据大屏界面、爬虫控制台界面)*
+
+| 📊 数据可视化大屏 | 🚀 爬虫任务控制台 |
+| --- | --- |
+|  |  |
+
+---
+
+## ✨ 核心技术亮点
+
+### 🛡️ 深度反爬虫引擎
+
+* **DrissionPage 深度集成**：引入新一代自动化工具，专门攻克 **Boss直聘** 等高难度风控站点，无需复杂的环境伪装即可模拟真实用户行为。
+* **Selenium 隐身模式**：自研中间件集成 CDP 协议，修改 WebDriver 特征，完美绕过 **51job** 的自动化测试检测。
+* **动态参数注入**：彻底告别“硬编码”，支持在前端 UI 动态输入**职位关键词**与**目标城市**，通过 Celery 动态传递参数给爬虫内核。
+
+### ⚙️ 企业级分布式架构
+
+* **任务调度中心**：基于 **Django + Celery + Redis** 构建高并发异步任务队列，支持任务的实时分发与状态监控。
+* **混合存储架构**：
+* **PostgreSQL**：存储用户权限、任务日志、分析结果等结构化业务数据。
+* **MongoDB**：作为原始数据湖，存储海量、异构的职位详情数据（Schema-free）。
+
+
+* **Docker 容器化**：实现了 Database、Backend、Frontend、Worker 的全链路容器化部署，一键拉起整个微服务集群。
+
+### 🔐 安全与权限
+
+* **JWT 无状态认证**：基于 SimpleJWT 实现前后端分离的安全认证。
+* **RBAC 权限模型**：实现了细粒度的权限控制，普通用户仅可浏览数据，管理员拥有爬虫启停的高级权限。
+
+---
+
+## 🏗 系统架构图
+
+```mermaid
+graph TD
+    User(用户/求职者) -->|浏览大屏| Vue[Vue 3 前端应用]
+    Admin(管理员) -->|下发指令| Vue
+    Vue <-->|REST API / JWT| Django[Django API 网关]
+
+    subgraph "分布式后端集群"
+        Django -->|鉴权| Auth[认证服务]
+        Django -->|生产任务| Redis[(Redis 消息队列)]
+        Redis -->|消费任务| Celery[Celery Worker 节点]
+    end
+
+    subgraph "智能采集引擎"
+        Celery -->|启动子进程| Scrapy[Scrapy 框架]
+        Scrapy -->|CDP协议/自动化| Driver[Chrome / DrissionPage]
+        Driver -->|拟人化交互| Targets(招聘平台: Boss/51job...)
+    end
+
+    subgraph "混合数据存储"
+        Scrapy -->|原始数据清洗| Mongo[(MongoDB)]
+        Django -->|业务聚合查询| PG[(PostgreSQL)]
+    end
+
+```
+
+---
+
+## 📂 项目目录结构
+
+```text
+SpiderScope/
+├── backend/                # 后端核心代码
+│   ├── core/               # 核心业务逻辑 (API, Tasks)
+│   ├── crawler/            # Scrapy 爬虫工程
+│   │   ├── spiders/        # 爬虫脚本 (51job, boss)
+│   │   └── middlewares.py  # 中间件 (DrissionPage/Selenium集成)
+│   ├── spiderscope/        # Django settings 配置
+│   └── Dockerfile          # 后端镜像构建文件
+├── frontend/               # 前端工程代码
+│   ├── src/                # Vue 源码 (Views, Stores, Components)
+│   └── Dockerfile          # 前端镜像构建文件 (含 Nginx)
+├── docker-compose.yml      # 容器编排文件
+└── README.md               # 项目说明文档
+
+```
+
+---
+
+## 🚀 快速开始 (Docker 一键部署)
+
+这是最推荐的部署方式，无需配置复杂的 Python/Node 环境。
+
+### 1. 环境准备
+
+确保本机已安装 [Docker Desktop](https://www.docker.com/)。
+
+### 2. 启动服务
+
+在项目根目录执行以下命令：
+
+```bash
+# 编译镜像并后台启动所有服务
+docker-compose up -d --build
+
+```
+
+### 3. 初始化配置 (仅首次)
+
+容器启动后，需要初始化数据库表结构并创建管理员：
+
+```bash
+# 1. 生成数据库表
+docker-compose exec backend python manage.py migrate
+
+# 2. 创建超级管理员账号 (按提示输入用户名/密码)
+docker-compose exec backend python manage.py createsuperuser
+
+```
+
+### 4. 访问系统
+
+* **Web 访问地址**: `http://localhost`
+* **API 文档**: `http://localhost:8000/api/schema/swagger-ui/` (如果开启了 Swagger)
+
+---
+
+## 🛠 本地开发指南
+
+如果你需要修改代码或调试爬虫逻辑：
+
+### 后端 (Backend)
+
+```bash
+cd backend
+# 1. 安装依赖
+pip install -r requirements.txt
+# 2. 启动 Django
+python manage.py runserver
+# 3. 启动 Celery Worker (Windows 需加 -P eventlet)
+celery -A spiderscope worker -l info -P eventlet
+
+```
+
+### 前端 (Frontend)
+
+```bash
+cd frontend
+# 1. 安装依赖
+npm install
+# 2. 启动开发服务器
+npm run dev
+
+```
+
+---
+
+## 📝 待办清单 (Roadmap)
+
+* [x] 完成 Boss直聘 与 51job 的采集适配
+* [x] 实现 Docker 容器化部署
+* [x] 集成 ECharts 数据大屏
+* [ ] 引入 NLP 技术进行职位描述的情感分析与关键词提取
+* [ ] 增加更多招聘源 (如拉勾网、猎聘)
+* [ ] 开发定时任务调度面板 (Crontab)
+

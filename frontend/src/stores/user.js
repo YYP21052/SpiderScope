@@ -17,8 +17,8 @@ export const useUserStore = defineStore('user', () => {
     const login = async (loginForm) => {
         try {
             // 发送请求给 Django
-            // 注意：这里我们假设后端接口是 /api/token/
-            const response = await axios.post('http://127.0.0.1:8000/api/token/', loginForm)
+            // 注意：使用相对路径，由 Nginx (生产) 或 Vite Proxy (开发) 转发
+            const response = await axios.post('/api/token/', loginForm)
 
             const { access, refresh, is_staff, is_superuser } = response.data
 

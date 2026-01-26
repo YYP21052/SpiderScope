@@ -97,7 +97,7 @@ const submitCrawl = async () => {
     try {
         const token = userStore.accessToken
        
-        await axios.post('http://127.0.0.1:8000/api/crawl/start/', 
+        await axios.post('/api/crawl/start/', 
             { 
               spider_name: crawlForm.spider_name,
               keyword: crawlForm.keyword,

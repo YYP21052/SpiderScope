@@ -131,7 +131,7 @@ const fetchList = async () => {
   }
 
   try {
-    const res = await axios.get('http://127.0.0.1:8000/api/jobs/list/', config)
+    const res = await axios.get('/api/jobs/list/', config)
     jobs.value = res.data
     // 列表获取后渲染图表
     renderChart()
@@ -148,7 +148,7 @@ const fetchList = async () => {
 const fetchStats = async () => {
   try {
     // 这个接口是 AllowAny，不需要 Token，但带上也没事
-    const res = await axios.get('http://127.0.0.1:8000/api/jobs/stats/')
+    const res = await axios.get('/api/jobs/stats/')
     statsOverview.value = res.data.overview
   } catch (err) {
     console.error("Fetch stats failed", err)
