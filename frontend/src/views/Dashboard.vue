@@ -5,32 +5,51 @@
         <h2>📊 JobRadar 数据大屏</h2>
       </div>
       <div class="user-info">
-        <span class="welcome-text">
-          <el-icon><User /></el-icon> 欢迎回来, {{ userStore.username }}
-        </span>
-        <el-button type="danger" plain size="small" @click="handleLogout">
-          退出登录
+        <!-- 🔴 修改：点击按钮弹出表单 -->
+        <!-- 🟢 导航到爬虫控制台 -->
+        <el-button 
+          v-if="userStore.accessToken" 
+          type="success" 
+          @click="$router.push('/crawl')"
+        >
+          🕷️ 进入爬虫控制台
         </el-button>
+        <el-button v-else type="primary" @click="$router.push('/login')">
+          登录 / 管理
+        </el-button>
+
+        <span v-if="userStore.accessToken" class="welcome-text">
+          <el-icon><User /></el-icon> 欢迎, {{ userStore.username }}
+        </span>
+        <el-button v-if="userStore.accessToken" type="danger" plain size="small" @click="handleLogout">
+          退出
+        </el-button>
+
+
       </div>
     </div>
 
+    <!-- ...stats-row and charts... --> 
+    <!-- (保留中间的 stats-row, chart-card, table-card 不变) -->
+    
     <el-row :gutter="20" class="stats-row">
       <el-col :span="8">
         <el-card shadow="hover" class="stats-card">
           <template #header>📦 总职位数</template>
-          <div class="stats-num">{{ totalJobs }}</div>
+          <!-- 使用后端聚合数据 -->
+          <div class="stats-num">{{ statsOverview.total || 0 }}</div>
         </el-card>
       </el-col>
       <el-col :span="8">
         <el-card shadow="hover" class="stats-card">
           <template #header>💰 平均起薪 (月)</template>
-          <div class="stats-num" style="color: #67C23A">¥ {{ avgMinSalary }}</div>
+          <div class="stats-num" style="color: #67C23A">¥ {{ statsOverview.avg_min_salary || 0 }}</div>
         </el-card>
       </el-col>
       <el-col :span="8">
         <el-card shadow="hover" class="stats-card">
           <template #header>🚀 最高薪资 (月)</template>
-          <div class="stats-num" style="color: #F56C6C">¥ {{ maxSalary }}</div>
+          <div class="stats-num" style="color: #F56C6C">¥ {{ statsOverview.max_salary || 0 }}</div>
         </el-card>
       </el-col>
     </el-row>
@@ -43,7 +62,7 @@
       <template #header>
         <div class="card-header">
           <span>📋 职位详细列表</span>
-          <el-button type="primary" size="small" @click="fetchData">🔄 刷新数据</el-button>
+          <el-button type="primary" size="small" @click="refreshAll">🔄 刷新数据</el-button>
         </div>
       </template>
 
@@ -74,13 +93,15 @@
       </el-table>
     </el-card>
 
+
+
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, reactive, onMounted, nextTick } from 'vue'
 import axios from 'axios'
-import * as echarts from 'echarts' // 引入 ECharts
+import * as echarts from 'echarts'
 import { useUserStore } from '../stores/user'
 import { useRouter } from 'vue-router'
 import { User } from '@element-plus/icons-vue'
@@ -91,65 +112,55 @@ const userStore = useUserStore()
 const router = useRouter()
 const loading = ref(false)
 
-const jobs = ref([]) // 存储所有职位数据
-const totalJobs = ref(0)
-const avgMinSalary = ref(0)
-const maxSalary = ref(0)
+const jobs = ref([]) 
+const statsOverview = ref({ total: 0, avg_min_salary: 0, max_salary: 0 })
 
 // --- 核心逻辑 ---
 
-// 1. 获取数据 (Day 9 写的 /api/jobs/ 接口)
-const fetchData = async () => {
-  // 从 Pinia Store 获取 Token
+// ... (fetchList 等函数保持不变，因为我们已经在上一步更新了它们)
+
+// ... (后面代码保持不变) ...
+
+// 1. 获取列表数据
+const fetchList = async () => {
   const token = userStore.accessToken
-  if (!token) {
-    ElMessage.warning('请先登录')
-    router.push('/login')
-    return
+  // 🟢 修改：不强制登录
+  const config = {}
+  if (token) {
+     config.headers = { 'Authorization': `Bearer ${token}` }
   }
 
-  loading.value = true
   try {
-    const res = await axios.get('http://127.0.0.1:8000/api/jobs/', {
-      headers: { 'Authorization': `Bearer ${token}` } // 带上 Token
-    })
-
+    const res = await axios.get('http://127.0.0.1:8000/api/jobs/list/', config)
     jobs.value = res.data
-
-    // 计算统计数据
-    calculateStats()
-    // 渲染图表
+    // 列表获取后渲染图表
     renderChart()
-
-    ElMessage.success('数据更新成功')
   } catch (err) {
     console.error(err)
-    if (err.response && err.response.status === 401) {
-       userStore.logout() // Token 过期自动登出
-    } else {
-       ElMessage.error('获取数据失败，请检查后端服务')
+    // 只有 401 且确实有 token 时才可能是过期
+    if (err.response?.status === 401 && token) {
+        userStore.logout()
     }
-  } finally {
-    loading.value = false
   }
 }
 
-// 2. 计算统计指标
-const calculateStats = () => {
-  if (jobs.value.length === 0) return
+// 2. 获取统计数据 (新接口)
+const fetchStats = async () => {
+  try {
+    // 这个接口是 AllowAny，不需要 Token，但带上也没事
+    const res = await axios.get('http://127.0.0.1:8000/api/jobs/stats/')
+    statsOverview.value = res.data.overview
+  } catch (err) {
+    console.error("Fetch stats failed", err)
+  }
+}
 
-  totalJobs.value = jobs.value.length
-
-  let minSalarySum = 0
-  let currentMax = 0
-
-  jobs.value.forEach(job => {
-    minSalarySum += job.min_salary
-    if (job.max_salary > currentMax) currentMax = job.max_salary
-  })
-
-  avgMinSalary.value = (minSalarySum / totalJobs.value).toFixed(0)
-  maxSalary.value = currentMax
+// 整合刷新
+const refreshAll = async () => {
+    loading.value = true
+    await Promise.all([fetchList(), fetchStats()])
+    loading.value = false
+    ElMessage.success('数据已更新')
 }
 
 // 3. 渲染 ECharts 图表
@@ -222,7 +233,7 @@ const handleLogout = () => {
 }
 
 onMounted(() => {
-  fetchData()
+  refreshAll()
 })
 </script>
 

@@ -15,37 +15,48 @@ from .models import SpiderTask  # <--- 引入模型
 
 
 @shared_task
-def run_spider_task(task_id):  # <--- 注意：这里改传 task_id 而不是名字
+def run_spider_task(spider_name, params=None):
     """
-    Celery 任务：根据数据库ID启动爬虫，并同步更新状态
+    Celery 任务：执行 Scrapy 爬虫 (支持动态参数)
+    :param spider_name: 爬虫名称
+    :param params: 字典参数, 会转换为 -a key=value 传给 scrapy
     """
-    # 1. 获取数据库对象
-    try:
-        task = SpiderTask.objects.get(id=task_id)
-        spider_name = "quotes"  # 暂时写死，以后可以从 task.name 获取动态名字
-    except SpiderTask.DoesNotExist:
-        return f"❌ 任务 ID {task_id} 不存在"
-
-    # 2. 修改状态为：运行中
-    print(f"🔄 更新状态：RUNNING (Task ID: {task_id})")
-    task.status = 'RUNNING'
-    task.save()
-
-    # 3. 准备启动爬虫
+    print(f"🚀 [Celery] 收到爬虫任务: {spider_name} | 参数: {params}")
+    
+    # 1. 定义工作目录 (确保切换到 Scrapy 项目根目录)
     cwd = os.path.join(settings.BASE_DIR, 'crawler')
+    
+    # 2. 构造命令 (使用当前 Python 环境)
     cmd = [sys.executable, '-m', 'scrapy', 'crawl', spider_name]
 
+    # 🟢 注入 -a 参数
+    if params:
+        for key, value in params.items():
+            cmd.extend(['-a', f'{key}={value}'])
+    
     try:
-        # Windows 防死锁写法
-        subprocess.run(cmd, cwd=cwd, check=True)
-
-        # 4. 爬虫结束，修改状态为：已完成
-        task.status = 'COMPLETED'
-        task.save()
-        return f"✅ 任务 {task_id} 执行完成"
+        # 3. 使用 Popen 调用 - ⚠️ Windows GUI 关键修改
+        # 移除 PIPEs，使用 shell=True 允许弹出窗口
+        # shell=True 在 Windows 上有助于唤起 GUI 子进程
+        process = subprocess.Popen(
+            cmd, 
+            cwd=cwd, 
+            shell=True  # 允许弹出CMD窗口(如有)，更有利于驱动显示
+        )
+        
+        print(f"⏳ [Celery] 爬虫 {spider_name} 正在运行 (PID: {process.pid})...")
+        print("💡 提示: 请检查服务器/Worker所在的机器是否有弹出的浏览器窗口")
+        
+        # 等待子进程结束 (阻塞当前 Celery Worker 直到爬虫跑完)
+        returncode = process.wait()
+        
+        if returncode == 0:
+            print(f"✅ [Celery] 爬虫 {spider_name} 执行完成！")
+            return f"爬虫 {spider_name} 成功结束"
+        else:
+            print(f"💥 [Celery] 爬虫 {spider_name} 退出码: {returncode}")
+            return f"爬虫 {spider_name} 异常退出"
 
     except Exception as e:
-        # 5. 如果出错，修改状态为：失败
-        task.status = 'FAILED'
-        task.save()
-        return f"💥 任务执行失败: {str(e)}"
+        print(f"❌ [Celery] 启动报错: {str(e)}")
+        return f"系统错误: {str(e)}"

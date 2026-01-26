@@ -6,21 +6,37 @@ import re
 class Job51Spider(scrapy.Spider):
     name = "51job"
     allowed_domains = ["51job.com"]
-    start_urls = ["https://we.51job.com/pc/search?keyword=Python&searchType=2&sortType=0&metro="]
-
+    # 移除写死的 start_urls
+    
     custom_settings = {
         # 只爬列表，速度可以稍微快一点点
         'CLOSESPIDER_ITEMCOUNT': 200,
-        'DOWNLOAD_DELAY': 3,
+        'DOWNLOAD_DELAY': 5, # 稍微调慢一点，稳一点
         'RANDOMIZE_DOWNLOAD_DELAY': True,
+        # Selenium 超时设置 (如果在中间件里实现了的话，这里是个提示)
+        'SELENIUM_TIMEOUT': 15, 
     }
+
+    def __init__(self, keyword='Python', city='全国', *args, **kwargs):
+        super(Job51Spider, self).__init__(*args, **kwargs)
+        self.keyword = keyword
+        self.city = city
+        
+        print(f" [51job] 初始化爬虫 | 关键词: {keyword} | 城市: {city}")
+        
+        # 动态构造 URL
+        # 注意：城市筛选比较复杂 (metro code)，暂时只支持关键词搜索，后续可扩展
+        self.start_urls = [
+            f"https://we.51job.com/pc/search?keyword={keyword}&searchType=2&sortType=0&metro="
+        ]
 
     def parse(self, response):
         print("=" * 50)
-        print("🎉 正在解析 51job 列表页...")
+        # 打印当前搜索条件
+        print(f" 正在解析 51job 列表页 (Key: {self.keyword})...")
 
         job_cards = response.css('.joblist-item')
-        print(f"📊 本页发现 {len(job_cards)} 个职位")
+        print(f" 本页发现 {len(job_cards)} 个职位")
 
         # === 1. 数据解析 ===
         for card in job_cards:
@@ -74,7 +90,7 @@ class Job51Spider(scrapy.Spider):
                     'job_description': "待抓取"
                 }
 
-                print(f"   ✅ [列表] {item['title']} | {item['company']}")
+                print(f"    [列表] {item['title']} | {item['company']}")
 
                 # 🔥 直接提交给 Pipeline，不去详情页了
                 yield item
@@ -100,4 +116,4 @@ class Job51Spider(scrapy.Spider):
             # 这里依然需要 Selenium 中间件去加载下一页
             yield scrapy.Request(new_url, callback=self.parse, dont_filter=True)
         else:
-            print("🛑 没有更多数据了")
+            print(" 没有更多数据了")

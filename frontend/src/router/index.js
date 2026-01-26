@@ -1,7 +1,8 @@
 import { createRouter, createWebHistory } from 'vue-router'
-// 引入我们的两个页面
+// 引入页面
 import Login from '../views/Login.vue'
 import Dashboard from '../views/Dashboard.vue'
+import SpiderControl from '../views/SpiderControl.vue' // 新增页面
 import { useUserStore } from '../stores/user'
 
 const routes = [
@@ -9,13 +10,19 @@ const routes = [
     path: '/login',
     name: 'Login',
     component: Login,
-    meta: { requiresAuth: false } // 不需要登录就能看
+    meta: { requiresAuth: false }
   },
   {
     path: '/',
     name: 'Dashboard',
     component: Dashboard,
-    meta: { requiresAuth: true } // 重点：这个页面需要登录才能看！
+    meta: { requiresAuth: false } // 🟢 修改：首页不需要登录即可查看
+  },
+  {
+    path: '/crawl',
+    name: 'SpiderControl',
+    component: SpiderControl,
+    meta: { requiresAuth: true } // 🔴 新增：只有爬虫控制页需要认证
   }
 ]
 
